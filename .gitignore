@@ -1,0 +1,20 @@
+# Environment
+.env
+.env.*
+
+# Dependencies
+node_modules/
+
+# Kiro IDE
+.kiro/
+
+# Temp files
+*.mp3
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

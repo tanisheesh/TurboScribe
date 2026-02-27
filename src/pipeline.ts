@@ -27,7 +27,7 @@ export async function runPipeline(
     onProgress?.("transcribe");
     const result = await transcribeFromCaptions(videoId);
     transcript = result.transcript;
-    console.log("[pipeline] Used YouTube captions");
+    console.log("[pipeline] captions path OK");
   } catch (captionErr) {
     // Fallback: download audio + Groq Whisper
     console.log("[pipeline] Captions unavailable, falling back to Whisper:", (captionErr as Error).message);

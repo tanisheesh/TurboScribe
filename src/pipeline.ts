@@ -58,7 +58,7 @@ export async function runPipeline(
     }
   }
 
-  // 3. Enrich transcript
+  // Step 3: Enrich
   onProgress?.("enrich");
   const { context, sources } = await enrich(transcript);
 

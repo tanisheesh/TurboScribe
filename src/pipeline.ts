@@ -23,7 +23,7 @@ export async function runPipeline(
   let transcript: string;
 
   try {
-    // Fast path: YouTube captions (no download, no API calls)
+    // Fast path: YouTube captions — no download, no API calls
     onProgress?.("transcribe");
     const result = await transcribeFromCaptions(videoId);
     transcript = result.transcript;

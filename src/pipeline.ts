@@ -46,7 +46,7 @@ export async function runPipeline(
     try {
       const result = await transcribeFromAudio(mp3Path);
       transcript = result.transcript;
-      console.log("[pipeline] Used Groq Whisper fallback");
+      console.log("[pipeline] Whisper fallback OK");
     } catch (err) {
       const cause = err instanceof Error ? err : new Error(String(err));
       throw new PipelineError(`Transcription failed: ${cause.message}`, cause);

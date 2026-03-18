@@ -19,7 +19,7 @@ export async function runPipeline(
 
   const { videoId } = validation;
 
-  // Step 1 & 2: try captions first (no download needed), fallback to Whisper
+  // Step 1 & 2: Transcribe — try captions first (no download needed), fallback to Whisper
   let transcript: string;
 
   try {

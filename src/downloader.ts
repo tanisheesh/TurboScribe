@@ -15,8 +15,9 @@ export async function downloadAudio(videoId: string): Promise<DownloadResult> {
 
   const mp3Path = `${tmpdir()}/${videoId}.mp3`;
   
-  // Use Bun as JS runtime (already installed in container)
-  // and enable remote EJS scripts from npm
+  // Let yt-dlp use default clients (works best without forcing specific clients)
+  // Deno is enabled by default for JS challenges
+  // EJS scripts will be downloaded from GitHub (more reliable than npm on servers)
   const args = [
     YT_DLP,
     "-f", "bestaudio",
@@ -24,13 +25,11 @@ export async function downloadAudio(videoId: string): Promise<DownloadResult> {
     "--audio-format", "mp3",
     "-o", mp3Path,
     "--no-check-certificates",
-    // Enable Bun as JavaScript runtime for YouTube challenges
-    "--js-runtimes", "bun",
-    // Enable remote EJS scripts from npm (Bun supports this)
-    "--remote-components", "ejs:npm",
-    // Use android_creator client (less bot detection)
-    "--extractor-args", "youtube:player_client=android_creator",
-    "--user-agent", "com.google.android.apps.youtube.creator/24.06.103 (Linux; U; Android 14) gzip",
+    // Enable remote EJS scripts from GitHub (more reliable on servers)
+    "--remote-components", "ejs:github",
+    // Add rate limiting to avoid bot detection
+    "--sleep-interval", "1",
+    "--max-sleep-interval", "3",
     "--retries", "5",
     "--fragment-retries", "5",
   ];
@@ -39,7 +38,7 @@ export async function downloadAudio(videoId: string): Promise<DownloadResult> {
   
   args.push(`https://www.youtube.com/watch?v=${videoId}`);
 
-  console.log(`[downloader] Downloading with Bun JS runtime and Android Creator client...`);
+  console.log(`[downloader] Downloading audio (default clients, Deno runtime, rate-limited)...`);
 
   const proc = Bun.spawn(args, { 
     stderr: "pipe",

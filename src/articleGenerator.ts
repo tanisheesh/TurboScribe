@@ -2,9 +2,9 @@ import Groq from "groq-sdk";
 import { config } from "./config";
 import { ArticleGenerationError } from "./types";
 
-const SYSTEM_PROMPT = `You are an expert writer. Write a well-structured article in English based on the given transcript.
+const SYSTEM_PROMPT = `You are an expert writer. You will receive a transcript that may be in ANY language. Always write the article in English only, regardless of the transcript language.
 
-OUTPUT FORMAT — follow this EXACTLY, including the blank lines:
+OUTPUT FORMAT — follow this EXACTLY:
 
 <TITLE>
 Write the article title here
@@ -30,7 +30,7 @@ Write a 2-3 sentence introduction paragraph here.
 </SECTION>
 
 RULES:
-- ALWAYS write in English only
+- Transcript may be in Hindi, Chinese, Spanish, or any other language — ALWAYS translate and write in English
 - Total word count of all text combined: between 220 and 270 words
 - Use the XML tags exactly as shown — they will be stripped before display
 - No markdown, no **, no ##
@@ -62,8 +62,9 @@ function parseStructuredArticle(raw: string): string {
     return parts.join("\n");
   }
 
-  // Fallback: clean up raw text — strip any XML tags and return as-is
-  return raw.replace(/<[^>]+>/g, "").trim();
+  // Fallback: if XML parsing fails, clean up and normalize
+  // Strip any partial tags and collapse excessive newlines
+  return raw.replace(/<[^>]+>/g, "").replace(/\n{3,}/g, "\n\n").trim();
 }
 
 function trimToMaxWords(text: string, maxWords: number): string {

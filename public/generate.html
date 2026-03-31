@@ -604,21 +604,14 @@
       container.innerHTML = '';
 
       let titleDone = false;
-      let paraBuffer = [];
-
-      const flushPara = () => {
-        if (!paraBuffer.length) return;
-        const p = document.createElement('p');
-        p.textContent = paraBuffer.join(' ');
-        p.style.marginBottom = '1rem';
-        container.appendChild(p);
-        paraBuffer = [];
-      };
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
-        if (!line) { flushPara(); continue; }
+        
+        // Skip empty lines
+        if (!line) continue;
 
+        // First non-empty line is the title
         if (!titleDone) {
           const titleEl = document.createElement('div');
           titleEl.className = 'article-title';
@@ -628,32 +621,31 @@
           continue;
         }
 
-        // A line is a section heading if:
-        // - it's short (≤ 70 chars)
-        // - doesn't end with sentence-ending punctuation
-        // - the next non-empty line is a paragraph (not another short line)
-        // - paraBuffer is empty (we just flushed or it's after a blank line)
+        // Check if this looks like a heading:
+        // - Short line (≤ 80 chars)
+        // - Doesn't end with sentence punctuation
+        // - Next non-empty line exists and is longer (paragraph)
         const nextLine = lines.slice(i + 1).find(l => l.trim()) || '';
-        const looksLikeHeading = (
-          line.length <= 70 &&
-          !line.endsWith('.') &&
-          !line.endsWith(',') &&
-          !line.endsWith(':') &&
-          paraBuffer.length === 0 &&
-          nextLine.length > 70
+        const isHeading = (
+          line.length <= 80 &&
+          !line.match(/[.!?,;:]$/) &&
+          nextLine.length > line.length &&
+          nextLine.length > 80
         );
 
-        if (looksLikeHeading && container.children.length > 1) {
-          flushPara();
+        if (isHeading) {
           const h = document.createElement('h2');
           h.textContent = line;
           h.style.cssText = 'font-family:"Space Grotesk",sans-serif;font-size:1rem;font-weight:700;color:#a855f7;margin:1.5rem 0 0.5rem;letter-spacing:0.01em;';
           container.appendChild(h);
         } else {
-          paraBuffer.push(line);
+          // Regular paragraph
+          const p = document.createElement('p');
+          p.textContent = line;
+          p.style.marginBottom = '1rem';
+          container.appendChild(p);
         }
       }
-      flushPara();
 
       const words = cleaned.trim().split(/\s+/).length;
       document.getElementById('word-count').textContent = words + ' words';

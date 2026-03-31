@@ -49,13 +49,16 @@ function parseStructuredArticle(raw: string): string {
   const sections: string[] = [];
   let match;
   while ((match = sectionRegex.exec(raw)) !== null) {
+    // Use double newline between heading and body for proper paragraph breaks
     sections.push(`${match[1].trim()}\n\n${match[2].trim()}`);
   }
 
   if (titleMatch && (introMatch || sections.length > 0)) {
     const parts = [titleMatch[1].trim()];
-    if (introMatch) parts.push("", introMatch[1].trim());
-    for (const s of sections) parts.push("", s);
+    // Double newline after title
+    if (introMatch) parts.push("\n", introMatch[1].trim());
+    // Double newline before each section
+    for (const s of sections) parts.push("\n", s);
     return parts.join("\n");
   }
 

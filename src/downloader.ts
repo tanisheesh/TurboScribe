@@ -14,9 +14,23 @@ export async function downloadAudio(videoId: string): Promise<DownloadResult> {
   }
 
   const mp3Path = `${tmpdir()}/${videoId}.mp3`;
-  const args = [YT_DLP, "-x", "--audio-format", "mp3", "-o", mp3Path];
+  const args = [
+    YT_DLP,
+    "-x",
+    "--audio-format", "mp3",
+    "-o", mp3Path,
+    "--no-check-certificates",
+    "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+  ];
+  
   if (FFMPEG_DIR) args.push("--ffmpeg-location", FFMPEG_DIR);
+  
+  // Add Node.js runtime for yt-dlp
+  args.push("--extractor-args", "youtube:player_client=web");
+  
   args.push(`https://www.youtube.com/watch?v=${videoId}`);
+
+  console.log(`[downloader] Running: ${args.join(" ")}`);
 
   const proc = Bun.spawn(args, { stderr: "pipe" });
   const exitCode = await proc.exited;

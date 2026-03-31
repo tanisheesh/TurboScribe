@@ -6,31 +6,61 @@ import { TranscriptionError } from "./types";
 // ── Strategy 1: YouTube captions (fast, free, no API) ──────────────────────
 
 async function fetchCaptions(videoId: string): Promise<string> {
+  console.log(`[transcriber] Attempting to fetch captions for ${videoId}`);
+  
   const pageRes = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
     headers: {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       "Accept-Language": "en-US,en;q=0.9",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Connection": "keep-alive",
+      "Upgrade-Insecure-Requests": "1",
     },
   });
 
-  if (!pageRes.ok) throw new Error(`Video page fetch failed: ${pageRes.status}`);
+  if (!pageRes.ok) {
+    console.log(`[transcriber] Video page fetch failed: ${pageRes.status}`);
+    throw new Error(`Video page fetch failed: ${pageRes.status}`);
+  }
 
   const html = await pageRes.text();
-  const match = html.match(/"captions":\s*(\{"playerCaptionsTracklistRenderer":.+?\})\s*,"videoDetails"/s);
-  if (!match) throw new Error("No captions found");
+  
+  // Try multiple patterns to extract captions
+  let match = html.match(/"captions":\s*(\{"playerCaptionsTracklistRenderer":.+?\})\s*,"videoDetails"/s);
+  if (!match) {
+    match = html.match(/"captions":\s*(\{[^}]+captionTracks[^}]+\})/s);
+  }
+  
+  if (!match) {
+    console.log(`[transcriber] No captions found in page HTML`);
+    throw new Error("No captions found");
+  }
 
   const captionsData = JSON.parse(match[1]);
   const tracks: any[] = captionsData?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
-  if (!tracks.length) throw new Error("No caption tracks");
+  
+  if (!tracks.length) {
+    console.log(`[transcriber] No caption tracks available`);
+    throw new Error("No caption tracks");
+  }
 
   const track = tracks.find((t: any) => t.languageCode === "en")
     ?? tracks.find((t: any) => t.languageCode?.startsWith("en"))
     ?? tracks[0];
 
+  console.log(`[transcriber] Found caption track: ${track.languageCode || 'unknown'}`);
+
   const captionRes = await fetch(track.baseUrl + "&fmt=json3", {
-    headers: { "User-Agent": "Mozilla/5.0" },
+    headers: { 
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    },
   });
-  if (!captionRes.ok) throw new Error(`Caption fetch failed: ${captionRes.status}`);
+  
+  if (!captionRes.ok) {
+    console.log(`[transcriber] Caption fetch failed: ${captionRes.status}`);
+    throw new Error(`Caption fetch failed: ${captionRes.status}`);
+  }
 
   const captionJson = await captionRes.json() as any;
   const text = (captionJson?.events ?? [])
@@ -41,8 +71,12 @@ async function fetchCaptions(videoId: string): Promise<string> {
     .replace(/\s+/g, " ")
     .trim();
 
-  if (!text) throw new Error("Caption text empty");
-  console.log(`[transcriber] Captions fetched: ${text.split(/\s+/).length} words`);
+  if (!text) {
+    console.log(`[transcriber] Caption text empty after parsing`);
+    throw new Error("Caption text empty");
+  }
+  
+  console.log(`[transcriber] Captions fetched successfully: ${text.split(/\s+/).length} words`);
   return text;
 }
 

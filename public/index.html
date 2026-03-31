@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TubeScribe — YouTube to Article</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --border: #1e1e2e;
+      --purple: #a855f7;
+      --pink: #ec4899;
+      --cyan: #06b6d4;
+      --green: #10b981;
+      --text: #e2e8f0;
+      --muted: #64748b;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* animated gradient bg */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 20%, rgba(168,85,247,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(6,182,212,0.10) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 60% at 50% 50%, rgba(236,72,153,0.06) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    nav {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-family: 'Space Mono', monospace;
+      font-size: 1.25rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-decoration: none;
+    }
+
+    .nav-badge {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--cyan);
+      border: 1px solid var(--cyan);
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      opacity: 0.8;
+    }
+
+    /* hero */
+    .hero {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 5rem 1.25rem 4rem;
+      gap: 1.75rem;
+    }
+
+    .hero-tag {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--purple);
+      border: 1px solid rgba(168,85,247,0.3);
+      background: rgba(168,85,247,0.08);
+      padding: 0.35rem 1rem;
+      border-radius: 999px;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 6vw, 5.5rem);
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      max-width: 900px;
+      word-break: break-word;
+    }
+
+    h1 .grad {
+      background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: clamp(0.95rem, 2.5vw, 1.2rem);
+      color: var(--muted);
+      max-width: 560px;
+      line-height: 1.7;
+    }
+
+    .cta-row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 0.5rem;
+      width: 100%;
+    }
+
+    .btn-primary, .btn-ghost {
+      flex: 1 1 auto;
+      max-width: 220px;
+      justify-content: center;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      color: #fff;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.85rem 2rem;
+      border-radius: 12px;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.2s;
+      box-shadow: 0 0 30px rgba(168,85,247,0.3);
+    }
+
+    .btn-primary:hover { opacity: 0.88; transform: translateY(-2px); }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: transparent;
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 500;
+      font-size: 1rem;
+      padding: 0.85rem 2rem;
+      border-radius: 12px;
+      text-decoration: none;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .btn-ghost:hover { border-color: var(--purple); transform: translateY(-2px); }
+
+    /* features */
+    .features {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.25rem;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 1.25rem 5rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.75rem;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .card:hover { border-color: var(--purple); transform: translateY(-3px); }
+
+    .card-icon {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+    }
+
+    .card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .card p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .accent-purple { color: var(--purple); }
+    .accent-cyan   { color: var(--cyan); }
+    .accent-pink   { color: var(--pink); }
+    .accent-green  { color: var(--green); }
+
+    /* footer */
+    footer {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 1.75rem 1.25rem;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-family: 'Space Mono', monospace;
+      line-height: 1.8;
+    }
+
+    footer a {
+      color: var(--purple);
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+
+    footer a:hover { opacity: 0.75; }
+
+    @media (max-width: 480px) {
+      h1 { font-size: clamp(1.75rem, 9vw, 2.5rem); }
+      .btn-primary, .btn-ghost { max-width: 100%; }
+      .features { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a class="logo" href="/">TubeScribe</a>
+    <span class="nav-badge">v1.0 · free</span>
+  </nav>
+
+  <section class="hero">
+    <span class="hero-tag">✦ AI-Powered · No Signup Required</span>
+    <h1>Turn any YouTube video<br/>into a <span class="grad">clean article</span></h1>
+    <p class="hero-sub">
+      Paste a link. Get a polished, under-300-word article in seconds —
+      powered by Groq Whisper &amp; LLaMA.
+    </p>
+    <div class="cta-row">
+      <a class="btn-primary" href="/generate-page">
+        ▶ &nbsp;Try it now
+      </a>
+      <a class="btn-ghost" href="https://github.com/tanisheesh/TurboScribe" target="_blank">
+        ★ &nbsp;GitHub
+      </a>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="card">
+      <div class="card-icon accent-purple">⬇</div>
+      <h3>Audio Download</h3>
+      <p>Pulls the audio track from any public YouTube video — no manual steps needed.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon accent-cyan">🎙</div>
+      <h3>Whisper Transcription</h3>
+      <p>Converts speech to accurate text in seconds using Groq's blazing-fast Whisper API.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon accent-pink">🔍</div>
+      <h3>Web Enrichment</h3>
+      <p>Finds and pulls relevant context from the web to make the article richer and more accurate.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon accent-green">✍</div>
+      <h3>AI Article</h3>
+      <p>LLaMA 3.3 70B writes a clean, structured article under 300 words from the transcript.</p>
+    </div>
+  </section>
+
+  <footer>
+    <div>© <span id="yr"></span> TubeScribe &nbsp;·&nbsp; Made with ❤️ by <a href="https://tanisheesh.is-a.dev/" target="_blank" rel="noopener">Tanish Poddar</a></div>
+  </footer>
+  <script>document.getElementById('yr').textContent = new Date().getFullYear();</script>

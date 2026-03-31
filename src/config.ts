@@ -5,4 +5,5 @@ export const config: AppConfig = {
   serperApiKey: process.env.SERPER_API_KEY ?? "",
   firecrawlApiKey: process.env.FIRECRAWL_API_KEY ?? "",
   groqApiKey: process.env.GROQ_API_KEY ?? "",
+  youtubeApiKey: process.env.YOUTUBE_API_KEY ?? "",
 };

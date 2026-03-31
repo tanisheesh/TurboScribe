@@ -3,84 +3,60 @@ import Groq from "groq-sdk";
 import { config } from "./config";
 import { TranscriptionError } from "./types";
 
-// ── Strategy 1: YouTube Transcript via direct API ──────────────────────
+// ── Strategy 1: YouTube timedtext API (most reliable, works from datacenter IPs) ──
 
 async function fetchTranscript(videoId: string): Promise<string> {
   console.log(`[transcriber] Fetching transcript for ${videoId}`);
   
   try {
-    // Get video page to extract transcript data
-    const pageUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    const response = await fetch(pageUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.9",
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch video page: ${response.status}`);
-    }
-
-    const html = await response.text();
-
-    // Extract captions/transcript URL from page
-    const captionsRegex = /"captionTracks":\s*(\[.*?\])/;
-    const match = html.match(captionsRegex);
-
-    if (!match) {
-      throw new Error("No transcript available for this video");
-    }
-
-    const captionTracks = JSON.parse(match[1]);
-    if (!captionTracks || captionTracks.length === 0) {
-      throw new Error("No transcript tracks found");
-    }
-
-    // Prefer English, fallback to first available
-    const track = captionTracks.find((t: any) => t.languageCode === "en" || t.languageCode?.startsWith("en")) || captionTracks[0];
-
-    if (!track.baseUrl) {
-      throw new Error("No transcript URL found");
-    }
-
-    // Fetch the actual transcript
-    const transcriptResponse = await fetch(track.baseUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-      },
-    });
-
-    if (!transcriptResponse.ok) {
-      throw new Error(`Failed to fetch transcript: ${transcriptResponse.status}`);
-    }
-
-    const transcriptXml = await transcriptResponse.text();
-
-    // Parse XML to extract text
-    const textRegex = /<text[^>]*>(.*?)<\/text>/g;
-    const texts: string[] = [];
-    let textMatch;
-
-    while ((textMatch = textRegex.exec(transcriptXml)) !== null) {
-      const text = textMatch[1]
-        .replace(/&amp;/g, "&")
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">")
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-        .replace(/\n/g, " ")
+    const extract = (data: any): string =>
+      (data?.events ?? [])
+        .flatMap((e: any) => e.segs?.map((s: any) => s.utf8) ?? [])
+        .filter((s: string) => s && s !== "\n")
+        .join(" ")
+        .replace(/\s+/g, " ")
         .trim();
-      if (text) texts.push(text);
+
+    // Step 1: Try common English codes
+    for (const lang of ["en", "en-US", "en-GB"]) {
+      const res = await fetch(
+        `https://www.youtube.com/api/timedtext?v=${videoId}&lang=${lang}&fmt=json3`,
+        { headers: { "User-Agent": "Mozilla/5.0" } }
+      );
+      if (!res.ok) continue;
+      const text = extract(await res.json());
+      if (text.length > 0) {
+        console.log(`[transcriber] ✓ Transcript fetched (timedtext/${lang}): ${text.split(/\s+/).length} words`);
+        return text;
+      }
     }
 
-    if (texts.length === 0) {
-      throw new Error("No transcript text found");
+    // Step 2: Discover all available tracks, prefer English
+    const listRes = await fetch(
+      `https://www.youtube.com/api/timedtext?v=${videoId}&type=list`,
+      { headers: { "User-Agent": "Mozilla/5.0" } }
+    );
+    if (listRes.ok) {
+      const listXml = await listRes.text();
+      const allLangs = [...listXml.matchAll(/lang_code="([^"]+)"/g)].map(m => m[1]);
+      const lang = allLangs.find(l => l.startsWith("en")) ?? allLangs[0];
+
+      if (lang) {
+        const res = await fetch(
+          `https://www.youtube.com/api/timedtext?v=${videoId}&lang=${lang}&fmt=json3`,
+          { headers: { "User-Agent": "Mozilla/5.0" } }
+        );
+        if (res.ok) {
+          const text = extract(await res.json());
+          if (text.length > 0) {
+            console.log(`[transcriber] ✓ Transcript fetched (timedtext/discovered:${lang}): ${text.split(/\s+/).length} words`);
+            return text;
+          }
+        }
+      }
     }
 
-    const transcript = texts.join(" ").replace(/\s+/g, " ").trim();
-    console.log(`[transcriber] ✓ Transcript fetched: ${transcript.split(/\s+/).length} words`);
-    return transcript;
+    throw new Error("No transcript available for this video");
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

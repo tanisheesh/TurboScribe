@@ -35,6 +35,7 @@ export interface AppConfig {
   serperApiKey: string;
   firecrawlApiKey: string;
   groqApiKey: string;
+  youtubeApiKey: string;
 }
 
 // Error types

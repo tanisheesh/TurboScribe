@@ -14,7 +14,6 @@
   "dependencies": {
     "groq-sdk": "^1.1.2",
     "openai": "^6.33.0",
-    "puppeteer-core": "^24.40.0",
-    "youtube-transcript": "^1.2.1"
+    "puppeteer-core": "^24.40.0"
   }
 }

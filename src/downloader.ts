@@ -14,33 +14,38 @@ export async function downloadAudio(videoId: string): Promise<DownloadResult> {
   }
 
   const mp3Path = `${tmpdir()}/${videoId}.mp3`;
+  
+  // Use Bun as JS runtime (already installed in container)
+  // and enable remote EJS scripts from npm
   const args = [
     YT_DLP,
+    "-f", "bestaudio",
     "-x",
     "--audio-format", "mp3",
     "-o", mp3Path,
     "--no-check-certificates",
-    "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    // Use web client and add more options to bypass bot detection
-    "--extractor-args", "youtube:player_client=web,android",
-    "--extractor-args", "youtube:skip=dash,hls",
-    // Add cookies from browser simulation
-    "--add-header", "Accept-Language:en-US,en;q=0.9",
-    "--add-header", "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    // Retry and rate limiting
-    "--retries", "3",
-    "--fragment-retries", "3",
-    "--sleep-interval", "1",
-    "--max-sleep-interval", "3",
+    // Enable Bun as JavaScript runtime for YouTube challenges
+    "--js-runtimes", "bun",
+    // Enable remote EJS scripts from npm (Bun supports this)
+    "--remote-components", "ejs:npm",
+    // Use android_creator client (less bot detection)
+    "--extractor-args", "youtube:player_client=android_creator",
+    "--user-agent", "com.google.android.apps.youtube.creator/24.06.103 (Linux; U; Android 14) gzip",
+    "--retries", "5",
+    "--fragment-retries", "5",
   ];
   
   if (FFMPEG_DIR) args.push("--ffmpeg-location", FFMPEG_DIR);
   
   args.push(`https://www.youtube.com/watch?v=${videoId}`);
 
-  console.log(`[downloader] Running: ${args.slice(0, 10).join(" ")} ...`);
+  console.log(`[downloader] Downloading with Bun JS runtime and Android Creator client...`);
 
-  const proc = Bun.spawn(args, { stderr: "pipe" });
+  const proc = Bun.spawn(args, { 
+    stderr: "pipe",
+    env: { ...process.env }
+  });
+  
   const exitCode = await proc.exited;
 
   if (exitCode !== 0) {
@@ -48,6 +53,7 @@ export async function downloadAudio(videoId: string): Promise<DownloadResult> {
     throw new DownloadError(stderr || `yt-dlp exited with code ${exitCode}`);
   }
 
+  console.log(`[downloader] ✓ Audio downloaded successfully`);
   return { mp3Path };
 }
 

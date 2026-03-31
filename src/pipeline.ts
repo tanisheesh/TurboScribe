@@ -19,14 +19,12 @@ export async function runPipeline(
 
   const { videoId } = validation;
 
-  // Step 1 & 2: Transcribe — try captions first, fallback to Whisper
-  onProgress?.("download");
-  onProgress?.("transcribe");
-
+  // Step 1 & 2: Transcribe — try captions first (no download needed), fallback to Whisper
   let transcript: string;
 
   try {
-    // Fast path: YouTube captions
+    // Fast path: YouTube captions (no download, no API calls)
+    onProgress?.("transcribe");
     const result = await transcribeFromCaptions(videoId);
     transcript = result.transcript;
     console.log("[pipeline] Used YouTube captions");
@@ -34,6 +32,7 @@ export async function runPipeline(
     // Fallback: download audio + Groq Whisper
     console.log("[pipeline] Captions unavailable, falling back to Whisper:", (captionErr as Error).message);
 
+    onProgress?.("download");
     let mp3Path: string;
     try {
       const result = await downloadAudio(videoId);
@@ -43,6 +42,7 @@ export async function runPipeline(
       throw new PipelineError(`Download failed: ${cause.message}`, cause);
     }
 
+    onProgress?.("transcribe");
     try {
       const result = await transcribeFromAudio(mp3Path);
       transcript = result.transcript;

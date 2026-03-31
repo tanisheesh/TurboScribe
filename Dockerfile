@@ -1,7 +1,7 @@
 FROM oven/bun:1 AS base
 WORKDIR /app
 
-# Install dependencies
+# Install dependencies including Node.js for yt-dlp
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     python3 \
@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     chromium \
     fonts-liberation \
+    nodejs \
     --no-install-recommends \
     && update-ca-certificates \
     && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \

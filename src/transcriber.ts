@@ -2,34 +2,59 @@ import { createReadStream } from "fs";
 import Groq from "groq-sdk";
 import { config } from "./config";
 import { TranscriptionError } from "./types";
-import { YoutubeTranscript } from "youtube-transcript";
+import { Supadata } from "@supadata/js";
 
-// ── Strategy 1: YouTube transcript via youtube-transcript library ──
+// ── Strategy 1: Supadata API (uses residential proxies, works from datacenter IPs) ──
 
 async function fetchTranscript(videoId: string): Promise<string> {
   console.log(`[transcriber] Fetching transcript for ${videoId}`);
   
   try {
-    let segments;
+    const supadata = new Supadata({ apiKey: config.supadataApiKey });
     
-    try {
-      segments = await YoutubeTranscript.fetchTranscript(videoId, { lang: "en" });
-    } catch {
-      // English not available, try whatever language exists
-      segments = await YoutubeTranscript.fetchTranscript(videoId);
+    const result = await supadata.transcript({
+      url: `https://www.youtube.com/watch?v=${videoId}`,
+      text: true,
+    });
+    
+    // Handle async job case (large files)
+    if ("jobId" in result) {
+      console.log(`[transcriber] Got jobId ${result.jobId}, polling for result...`);
+      let jobResult = await supadata.transcript.getJobStatus(result.jobId);
+      
+      // Poll until completed or failed
+      while (jobResult.status === "queued" || jobResult.status === "active") {
+        await new Promise(r => setTimeout(r, 2000));
+        jobResult = await supadata.transcript.getJobStatus(result.jobId);
+      }
+      
+      if (jobResult.status === "failed") {
+        const errorMsg = typeof jobResult.error === "string" 
+          ? jobResult.error 
+          : jobResult.error?.message || "Transcript job failed";
+        throw new Error(errorMsg);
+      }
+      
+      if (jobResult.status === "completed" && jobResult.result) {
+        const content = jobResult.result.content;
+        const text = typeof content === "string" 
+          ? content 
+          : content.map((c: any) => c.text).join(" ");
+        const cleanText = text.replace(/\s+/g, " ").trim();
+        console.log(`[transcriber] ✓ Transcript fetched: ${cleanText.split(/\s+/).length} words`);
+        return cleanText;
+      }
+      
+      throw new Error("No transcript content in job result");
     }
     
-    if (!segments || segments.length === 0) {
+    // Direct transcript case
+    if (!result.content) {
       throw new Error("No transcript available for this video");
     }
     
-    const text = segments
-      .map(s => s.text)
-      .join(" ")
-      .replace(/\s+/g, " ")
-      .trim();
-    
-    console.log(`[transcriber] ✓ Transcript fetched (${segments[0]?.lang ?? "unknown"}): ${text.split(/\s+/).length} words`);
+    const text = (result.content as string).replace(/\s+/g, " ").trim();
+    console.log(`[transcriber] ✓ Transcript fetched (${result.lang}): ${text.split(/\s+/).length} words`);
     return text;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

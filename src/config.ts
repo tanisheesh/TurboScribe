@@ -6,4 +6,5 @@ export const config: AppConfig = {
   firecrawlApiKey: process.env.FIRECRAWL_API_KEY ?? "",
   groqApiKey: process.env.GROQ_API_KEY ?? "",
   youtubeApiKey: process.env.YOUTUBE_API_KEY ?? "",
+  supadataApiKey: process.env.SUPADATA_API_KEY ?? "",
 };

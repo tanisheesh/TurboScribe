@@ -21,16 +21,24 @@ export async function downloadAudio(videoId: string): Promise<DownloadResult> {
     "-o", mp3Path,
     "--no-check-certificates",
     "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    // Use web client and add more options to bypass bot detection
+    "--extractor-args", "youtube:player_client=web,android",
+    "--extractor-args", "youtube:skip=dash,hls",
+    // Add cookies from browser simulation
+    "--add-header", "Accept-Language:en-US,en;q=0.9",
+    "--add-header", "Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    // Retry and rate limiting
+    "--retries", "3",
+    "--fragment-retries", "3",
+    "--sleep-interval", "1",
+    "--max-sleep-interval", "3",
   ];
   
   if (FFMPEG_DIR) args.push("--ffmpeg-location", FFMPEG_DIR);
   
-  // Add Node.js runtime for yt-dlp
-  args.push("--extractor-args", "youtube:player_client=web");
-  
   args.push(`https://www.youtube.com/watch?v=${videoId}`);
 
-  console.log(`[downloader] Running: ${args.join(" ")}`);
+  console.log(`[downloader] Running: ${args.slice(0, 10).join(" ")} ...`);
 
   const proc = Bun.spawn(args, { stderr: "pipe" });
   const exitCode = await proc.exited;
